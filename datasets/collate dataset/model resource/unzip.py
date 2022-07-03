@@ -5,9 +5,9 @@ import zipfile
 from utils import multi_process, load_temp_json, save_temp_json
 
 formats = ['dae', 'smd']
-all_zip_dir = './model resource zip/'
-all_unzip_dir = './model resource unzip/'
-unzip_failed_dir = './model resource unzip failed/'
+all_zip_dir = './zip/'
+all_unzip_dir = './unzip/'
+unzip_failed_dir = './unzip failed/'
 
 def copy_format_file(src_dir, dest_dir, formats):
     for sub_dir in os.listdir(src_dir):
@@ -53,10 +53,10 @@ if __name__ == '__main__':
     unziped = [x for x in os.listdir(all_unzip_dir)]
     models = [x for x in models if x not in unziped]
     failed = multi_process(extract, models, process_number)
-    with open('model_resource_unzip_failed.json', 'w') as file:
+    with open('unzip_failed.json', 'w') as file:
         failed = json.dumps(failed)
         file.write(failed)
-    with open('model_resource_unzip_failed.json') as file:
+    with open('unzip_failed.json') as file:
         failed = json.load(file)
     for number in failed:
         shutil.move(all_zip_dir + number + '.zip', unzip_failed_dir + number + '.zip')

@@ -23,11 +23,11 @@ def filter_format(number):
 
 if __name__ == '__main__':
     process_number = 8
-    with open('model_resource_sections.json') as file:
+    with open('sections.json') as file:
         games = json.load(file)
 
-    if os.path.isfile('model_resource_models.json'):
-        with open('model_resource_models.json') as file:
+    if os.path.isfile('models.json'):
+        with open('models.json') as file:
             models = json.load(file)
             finish = [(a, b) for a, b, _ in models]
     else:
@@ -54,6 +54,6 @@ if __name__ == '__main__':
     result = [[value[0], number, value[1]] for number, value in result.items()]
     result.sort(key = lambda x:x[1])
     
-    with open('model_resource_models.json', 'w') as file:
+    with open('models.json', 'w') as file:
         result = json.dumps(result)
         file.write(result)

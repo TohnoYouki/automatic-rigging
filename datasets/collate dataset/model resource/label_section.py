@@ -4,7 +4,7 @@ from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 def save_data(models):
-    with open('model_resource_section_label.json', 'w') as file:
+    with open('section_label.json', 'w') as file:
         models = [[html, number, models[(html, number)]] for html, number in models]
         models.sort(key = lambda x:x[1])
         content = json.dumps(models)
@@ -13,17 +13,17 @@ def save_data(models):
 max_tab_name = 8
 assert(max_tab_name > 0)
 
-with open('model_resource_sections.json') as file:
+with open('sections.json') as file:
     games = json.load(file)
 games = sum([games[x] for x in games], [])
 
-with open('model_resource_models.json') as file:
+with open('models.json') as file:
     models = json.load(file)
     models = {(html, number):None if label else False 
                for html, number, label in models}
 
-if os.path.isfile('model_resource_section_label.json'):
-    with open('model_resource_section_label.json') as file:
+if os.path.isfile('section_label.json'):
+    with open('section_label.json') as file:
         labeled = json.load(file)
         labeled = {(html, number):label for html, number, label in labeled}
         for key in labeled: models[key] = labeled[key]

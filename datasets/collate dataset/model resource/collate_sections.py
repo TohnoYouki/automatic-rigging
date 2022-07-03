@@ -32,7 +32,7 @@ def get_all_section_models(number):
 
 if __name__ == '__main__':
     process_number = 8
-    with open('model_resource_games.json') as file:
+    with open('games.json') as file:
         games = json.load(file)
     games = [[[x, html, name] for html, name in games[x]] for x in games]
     games = sum(games, [])
@@ -45,6 +45,6 @@ if __name__ == '__main__':
     for console in result:
         result[console].sort(key = lambda x:x[0])
     
-    with open('model_resource_sections.json', 'w') as file:
+    with open('sections.json', 'w') as file:
         result = json.dumps(result)
         file.write(result)
