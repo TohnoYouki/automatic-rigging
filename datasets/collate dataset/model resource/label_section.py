@@ -1,4 +1,4 @@
-import json
+import os, json
 from utils import base_url
 from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
@@ -21,10 +21,12 @@ with open('model_resource_models.json') as file:
     models = json.load(file)
     models = {(html, number):None if label else False 
                for html, number, label in models}
-with open('model_resource_section_label.json') as file:
-    labeled = json.load(file)
-    labeled = {(html, number):label for html, number, label in labeled}
-    for key in labeled: models[key] = labeled[key]
+
+if os.path.isfile('model_resource_section_label.json'):
+    with open('model_resource_section_label.json') as file:
+        labeled = json.load(file)
+        labeled = {(html, number):label for html, number, label in labeled}
+        for key in labeled: models[key] = labeled[key]
 
 unlabel_games = []
 for game in games:

@@ -3,7 +3,7 @@ import json
 import requests
 from utils import multi_process, load_temp_json, save_temp_json
 
-save_dir = './model source zip/'
+save_dir = './model resource zip/'
 def download(number):
     models = load_temp_json(number)
     pedding = [x for x in models]
@@ -23,7 +23,7 @@ def download(number):
 
 if __name__ == '__main__':
     process_number = 8
-    with open('model_source_section_label.json') as file:
+    with open('model_resource_section_label.json') as file:
         download_info = json.load(file)
     download_info = [x for x in download_info if x[2]]
     downloaded = {x.split('.')[0] for x in os.listdir(save_dir)}
