@@ -53,6 +53,7 @@ if __name__ == '__main__':
         result[number] = [html, label]
     result = [[value[0], number, value[1]] for number, value in result.items()]
     result.sort(key = lambda x:x[1])
+    
     with open('model_resource_models.json', 'w') as file:
         result = json.dumps(result)
         file.write(result)
