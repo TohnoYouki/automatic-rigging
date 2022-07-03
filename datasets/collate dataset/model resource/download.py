@@ -6,7 +6,7 @@ from utils import multi_process, load_temp_json, save_temp_json
 save_dir = './model source zip/'
 def download(number):
     models = load_temp_json(number)
-    pedding = [x[1] for x in models]
+    pedding = [x for x in models]
     for i, info in enumerate(models):
         html, index = info
         print(i, index, len(models))
@@ -18,7 +18,7 @@ def download(number):
         with open(save_dir + index + '.zip', 'wb') as file:
             for chunk in model.iter_content(chunk_size = 128):
                 file.write(chunk)
-        pedding.remove(index)
+        pedding = [x for x in pedding if x[1] != index]
         save_temp_json(number, pedding)
 
 if __name__ == '__main__':
