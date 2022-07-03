@@ -53,10 +53,12 @@ if __name__ == '__main__':
     unziped = [x for x in os.listdir(all_unzip_dir)]
     models = [x for x in models if x not in unziped]
     failed = multi_process(extract, models, process_number)
+    
     with open('unzip_failed.json', 'w') as file:
         failed = json.dumps(failed)
         file.write(failed)
+
     with open('unzip_failed.json') as file:
         failed = json.load(file)
     for number in failed:
-        shutil.move(all_zip_dir + number + '.zip', unzip_failed_dir + number + '.zip')
+        shutil.copy(all_zip_dir + number + '.zip', unzip_failed_dir + number + '.zip')
