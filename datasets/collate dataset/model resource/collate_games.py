@@ -63,6 +63,6 @@ if __name__ == '__main__':
         result[console] = [[a, b] for a, b in result[console]]
         result[console].sort(key = lambda x:x[0])
     
-    with open('model_source_games.json', 'w') as file:
+    with open('model_resource_games.json', 'w') as file:
         result = json.dumps(result)
         file.write(result)
