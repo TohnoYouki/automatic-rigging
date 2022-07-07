@@ -33,7 +33,7 @@ class SMDReader:
         now_block = None
         for i in range(len(content) + 1):
             if i < len(content):
-                if len(content[i]) > 0 and content[i][0] in result:
+                if len(content[i]) > 0 and content[i][0] in result and now_block is None:
                     now_block = [content[i][0], i]
             if now_block is None: continue
             if i == len(content) or (len(content[i]) > 0 and content[i][0] == 'end'):
