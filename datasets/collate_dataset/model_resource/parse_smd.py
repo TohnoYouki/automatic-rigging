@@ -34,7 +34,7 @@ def get_pending():
     numbers = os.listdir(model_path)
     paths = sum([search_smd(model_path + number + '/') for number in numbers], [])
     names = [path.split('/') for path in paths]
-    names = [x[-2] + '_' + x[-1].split('.')[0] for x in names]
+    names = ['smd' + '_' + x[-2] + '_' + x[-1].split('.')[0] for x in names]
     extracted = [x.split('.')[0] for x in os.listdir(save_path)]
     pending = [[paths[i], names[i]] for i in range(len(paths)) 
                 if names[i] not in extracted]
@@ -56,5 +56,6 @@ if __name__ == '__main__':
     failed = sum([failed[x] for x in failed], [])
     failed = [x[0] for x in failed]
     pending = get_pending()
+
     if len(pending) != len(failed) or any([x[0] not in failed for x in pending]): 
         print('please run again!') 
