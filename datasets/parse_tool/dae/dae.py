@@ -2,7 +2,6 @@ import numpy as np
 from collada import *
 from .scene import Scene
 from .reader import Reader
-from .controller import Controller
 
 class DAE:
     @staticmethod
