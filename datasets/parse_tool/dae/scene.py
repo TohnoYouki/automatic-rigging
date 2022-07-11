@@ -42,7 +42,6 @@ class Scene:
                     match_items.append(indexs)
                 elif node.xmlnode.get('name', None) == ref_id:
                     match_items.append(indexs)
-                if node is controller_node: break
             if len(match_items) == 0: continue
             match_items = [x for x in match_items if len(x) > 0]
             for index in match_items[-1]:
