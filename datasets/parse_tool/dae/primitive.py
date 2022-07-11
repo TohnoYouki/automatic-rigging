@@ -71,7 +71,9 @@ class Geometry:
             vector_a = vertex_b - vertex_a
             vector_b = vertex_c - vertex_a
             normal = np.cross(vector_a, vector_b)
-            normal = normal / np.linalg.norm(normal)
+            if np.linalg.norm(normal) < 1e-8:
+                normal = [0, 1.0, 0]
+            else: normal = normal / np.linalg.norm(normal)
             face_normals.append([normal, normal, normal])
         return np.array(face_normals).reshape(-1, 3)
 

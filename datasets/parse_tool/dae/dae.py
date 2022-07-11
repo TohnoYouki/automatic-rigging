@@ -2,6 +2,7 @@ import numpy as np
 from collada import *
 from .scene import Scene
 from .reader import Reader
+from .controller import Controller
 
 class DAE:
     @staticmethod
@@ -12,6 +13,7 @@ class DAE:
             matrix = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         else: assert(False)
         scene.vertices = np.matmul(matrix, scene.vertices.T).T
+        scene.normals = np.matmul(np.linalg.inv(matrix).T, scene.normals.T).T
         scene.joint_position = np.matmul(matrix, scene.joint_position.T).T
 
     @staticmethod
