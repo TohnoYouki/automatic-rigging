@@ -33,7 +33,7 @@ def get_pending():
     numbers = os.listdir(model_path)
     paths = sum([search_dae(model_path + number + '/') for number in numbers], [])
     names = [path.split('/') for path in paths]
-    names = [x[-2] + '_' + x[-1].split('.')[0] for x in names]
+    names = ['dae' + '_' + x[-2] + '_' + x[-1].split('.')[0] for x in names]
     extracted = [x.split('.')[0] for x in os.listdir(save_path)]
     extracted = [x[:len(x) - x[::-1].index('_') - 1] for x in extracted]
     pending = [[paths[i], names[i]] for i in range(len(paths)) if names[i] not in extracted]
