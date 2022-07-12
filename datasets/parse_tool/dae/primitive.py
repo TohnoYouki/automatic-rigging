@@ -56,9 +56,9 @@ class Geometry:
             face_index = np.array(face_index)
         elif isinstance(primitive, geometry.triangleset.TriangleSet):
             face_index = np.arange(primitive.ntriangles * 3).reshape(-1, 3)
-        else: 
-            assert(isinstance(primitive, geometry.lineset.LineSet))
-            face_index = None
+        elif isinstance(primitive, geometry.lineset.LineSet):
+            face_index = [[i * 2, i * 2 + 1, i * 2] for i in range(primitive.nlines)]
+            face_index = np.array(face_index).reshape(-1, 3)
         return face_index
 
     @staticmethod
