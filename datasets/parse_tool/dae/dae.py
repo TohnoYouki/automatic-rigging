@@ -22,6 +22,6 @@ class DAE:
         if collada is None: return None
         result = [Scene(scene) for scene in collada.scenes]
         result = [x for x in result if x.vertices is not None]
-        for scene in result:
+        for scene in result: 
             DAE.transform(scene, collada.assetInfo.upaxis)
         return result

@@ -45,7 +45,7 @@ class Controller:
                     assert(isinstance(xmlnode, _Element))
                     if 'skeleton' in xmlnode.tag:
                         skeleton.append(xmlnode.text[1:])
-                if len(skeleton) <= 0: continue
+                if len(skeleton) <= 0: raise Exception('No skeleton id in controller node!')
                 control = node.controller
                 assert(isinstance(control, controller.Skin))
                 sids, skins = Controller.parse_skin(control)

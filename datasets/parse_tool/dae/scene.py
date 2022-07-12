@@ -34,7 +34,6 @@ class Scene:
         joints = []
         for ref_id in controller['skeleton']:
             match_items = []
-            controller_node = controller['node']
             for node, indexs in skeletons.ref:
                 if hasattr(node, 'id') and node.id == ref_id:
                     match_items.append(indexs)
@@ -42,9 +41,9 @@ class Scene:
                     match_items.append(indexs)
                 elif node.xmlnode.get('name', None) == ref_id:
                     match_items.append(indexs)
-            if len(match_items) == 0: continue
+            if len(match_items) == 0: raise Exception('Skeleton ref error!')
             match_items = [x for x in match_items if len(x) > 0]
-            for index in match_items[-1]:
+            for index in match_items[-1]: 
                 joints.append(index)
         if len(controller['skeleton']) == 0:
             joints = [x for x in range(len(skeletons.ids))]
@@ -66,7 +65,7 @@ class Scene:
                     if len(indexs) == 1:
                         index_map.append(indexs[0])
                     else: index_map.append(None)
-                if index_map.count(None) > 0: continue
+                if index_map.count(None) > 0: raise Exception('Joint ref error!')
             else: index_map = [x for x in range(len(sids))]
             controller['index_map'] = index_map   
 
@@ -82,11 +81,8 @@ class Scene:
             skins.extend([[[controller['index_map'][i], w] 
                             for i, w in y] for y in controller['skin']])
         self.skins = skins
-        if len(vertices) <= 0:
-            self.vertices = None
-            self.normals = None
-            self.triangles = None
-        else:
+        if len(vertices) > 0:
             self.vertices = np.concatenate(vertices)
             self.normals = np.concatenate(normals)
             self.triangles = np.concatenate(triangles)
+        else: self.vertices = self.normals = self.triangles = None

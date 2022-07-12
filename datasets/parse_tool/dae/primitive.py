@@ -13,7 +13,7 @@ class Geometry:
             assert(len(source) == 1)
             source_id, source_num = source[0][2], len(source[0][4])
             parse_result = Geometry.parse_primitive(primitive)
-            if parse_result is None: continue
+            if parse_result is None: raise Exception('Primitive parse error!')
             vertices, normals, triangles = parse_result
             if source_id not in source_ids:
                 source_ids[source_id] = vertex_num
