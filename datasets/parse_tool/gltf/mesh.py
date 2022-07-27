@@ -79,10 +79,16 @@ class Geometry:
     def transfer(self, matrix):
         padding = np.ones((len(self.vertices), 1))
         vertices = np.concatenate((self.vertices, padding), 1)
+        vertices = vertices.reshape(-1, 4, 1)
         padding = np.zeros((len(self.normals), 1))
         normals = np.concatenate((self.normals, padding), 1)
-        vertices = np.matmul(matrix, vertices.T).T
-        normals = np.matmul(np.linalg.inv(matrix).T, normals.T).T
+        normals = normals.reshape(-1, 4, 1)
+        vertices = np.matmul(matrix, vertices)[:, :, 0]
+        normal_matrix = np.linalg.inv(matrix)
+        shape = [i for i in range(len(normal_matrix.shape))]
+        shape[-1], shape[-2] = len(shape) - 2, len(shape) - 1
+        normal_matrix = normal_matrix.transpose(*shape)
+        normals = np.matmul(normal_matrix, normals)[:, :, 0]
         vertices = vertices[:, :3] / vertices[:, 3:]
         norm = np.linalg.norm(normals, axis = 1)[:, np.newaxis]
         assert(np.min(norm) >= 1e-8)
@@ -98,6 +104,10 @@ class Primitive:
     @staticmethod
     def parse_attribute(attributes, accessors):
         result = {}
+        if isinstance(attributes, dict):
+            for key, index in attributes.items():
+                result[key] = accessors[index]
+            return result
         if attributes.POSITION is not None:
             result['position'] = accessors[attributes.POSITION]
         if attributes.NORMAL is not None:
@@ -151,9 +161,15 @@ class Primitive:
             weights = attributes['weights0']
             assert(joints.shape == weights.shape)
             assert(len(joints.shape) == 2)
-            assert(np.max(np.abs(np.sum(weights, 1) - 1.0)) < 1e-5)
-            skins = [[[joints[i][j], weights[i][j]] 
-                 for j in range(len(joints[i]))] for i in range(len(joints))]
+            skins = []
+            for i in range(len(joints)):
+                sum_weight = np.sum(weights[i])
+                if sum_weight < 1e-5: 
+                    skins.append([])
+                    continue
+                normalize_weights = weights[i] / sum_weight
+                skins.append([[joints[i][j], normalize_weights[j]] 
+                              for j in range(len(joints[i]))])
         else: skins = [[] for _ in range(len(vertices))]
         assert(len(vertices) == len(skins))
         assert(len(normals) == len(skins))
