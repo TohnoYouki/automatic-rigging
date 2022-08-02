@@ -1,6 +1,8 @@
 import os
+import sys
 import shutil
 import zipfile
+sys.path.append('../../../utils/')
 from multiprocess import multi_process
 
 formats = ['dae', 'smd']

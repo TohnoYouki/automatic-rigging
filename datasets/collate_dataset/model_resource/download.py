@@ -1,6 +1,8 @@
 import os
+import sys
 import json
 import requests
+sys.path.append('../../../utils/')
 from multiprocess import multi_process
 
 save_dir = './zip/'

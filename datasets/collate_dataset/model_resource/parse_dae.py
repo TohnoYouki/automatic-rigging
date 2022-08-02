@@ -1,10 +1,13 @@
 import os
+import sys
 import json
-from dae.dae import DAE
+sys.path.append('../../parse_tool/dae/')
+from dae import DAE
+sys.path.append('../../../utils/')
 from multiprocess import multi_process
 
 model_path = './unzip/'
-save_path = './extract/'
+save_path = './extract dae/'
 
 def search_dae(path):
     result = []
@@ -14,6 +17,18 @@ def search_dae(path):
         elif '.dae' in subdir.lower(): 
             result.append(path + subdir)
     return result
+
+def get_pending():
+    numbers = os.listdir(model_path)
+    paths = [search_dae(model_path + x + '/') for x in numbers]
+    paths = sum(paths, [])
+    names = [path.split('/') for path in paths]
+    names = ['dae' + '_' + x[-2] + '_' + x[-1].split('.')[0] for x in names]
+    extracted = [x.split('.')[0] for x in os.listdir(save_path)]
+    extracted = [x[:len(x) - x[::-1].index('_') - 1] for x in extracted]
+    pending = [[paths[i], names[i]] for i in range(len(paths)) 
+                if names[i] not in extracted]
+    return pending
 
 def extract(data):
     path, name = data
@@ -29,16 +44,6 @@ def extract(data):
         collada.save(name + '_' + str(j), save_path)
     return [path, name, 'successful'] 
 
-def get_pending():
-    numbers = os.listdir(model_path)
-    paths = sum([search_dae(model_path + number + '/') for number in numbers], [])
-    names = [path.split('/') for path in paths]
-    names = ['dae' + '_' + x[-2] + '_' + x[-1].split('.')[0] for x in names]
-    extracted = [x.split('.')[0] for x in os.listdir(save_path)]
-    extracted = [x[:len(x) - x[::-1].index('_') - 1] for x in extracted]
-    pending = [[paths[i], names[i]] for i in range(len(paths)) if names[i] not in extracted]
-    return pending
-
 if __name__ == '__main__':
     process_number = 8
     pending = get_pending()
@@ -50,7 +55,9 @@ if __name__ == '__main__':
     zero_fail = [[x[0], x[1]] for x in status if x[2] == 'zero']
 
     with open('parse_dae_result.json', 'w') as file:
-        result = json.dumps({'load_fail': load_fail, 'parse_fail': parse_fail, 'zero_fail': zero_fail})
+        result = json.dumps({'load_fail': load_fail, 
+                             'parse_fail': parse_fail, 
+                             'zero_fail': zero_fail})
         file.write(result)
 
     load_fail.extend(parse_fail)

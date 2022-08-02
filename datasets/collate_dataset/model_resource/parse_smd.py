@@ -1,7 +1,10 @@
 import os
+import sys
 import json
+sys.path.append('../../parse_tool/smd/')
 from smd import SMDReader
 from rigging_mesh import RiggingMesh
+sys.path.append('../../../utils/')
 from multiprocess import multi_process
 
 model_path = './unzip/'

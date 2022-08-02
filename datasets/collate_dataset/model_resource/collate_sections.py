@@ -1,4 +1,5 @@
-import os, json
+import os, sys, json
+sys.path.append('../../../utils/')
 from multiprocess import multi_process
 from utils import base_url, get_request
 from utils import find_all, find_middle_content
