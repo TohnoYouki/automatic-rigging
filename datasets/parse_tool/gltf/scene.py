@@ -57,6 +57,7 @@ class Scene:
             if not isinstance(nodes[i].skeleton, Skeleton): continue
             if nodes[i].skeleton in skeletons: continue
             skeletons.append(nodes[i].skeleton)
+        if len(skeletons) <= 0: return None
         positions = np.concatenate([x.positions for x in skeletons])
         for x in skeletons: names.extend(x.joints)
         num = [len(x.positions) for x in skeletons]
@@ -69,7 +70,8 @@ class Scene:
     def parse(scene, nodes):
         scene_nodes = Scene.scene_nodes(scene, nodes)
         scene_skeleton = Scene.scene_skeleton(scene_nodes)
-        joint_pos, parents, names, skeletons, prefixs = scene_skeleton
+        if scene_skeleton is not None:
+            joint_pos, parents, names, skeletons, prefixs = scene_skeleton
         meshes = [x.global_mesh() for x in scene_nodes]
         for i, mesh in enumerate(meshes):
             if mesh is None: continue
@@ -81,6 +83,7 @@ class Scene:
                     mesh.skins[j][k][0] += prefix
         meshes = [x for x in meshes if x is not None]
         mesh = Geometry.merge_geometries(meshes)
+        if scene_skeleton is None: return mesh
         vertices, normals = mesh.vertices, mesh.normals
         triangles, skins = mesh.triangles, mesh.skins
         return Scene(scene.name, vertices, normals, triangles,

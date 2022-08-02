@@ -1,7 +1,7 @@
 import numpy as np
 from collada import *
 from lxml.etree import _Element
-from .primitive import Geometry
+from primitive import Geometry
 
 class Controller:
     def __init__(self, collada_scene):

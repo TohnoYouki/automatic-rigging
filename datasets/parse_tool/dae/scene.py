@@ -1,8 +1,8 @@
 import json
 import numpy as np
 from collada import *
-from .skeleton import Skeleton
-from .controller import Controller
+from skeleton import Skeleton
+from controller import Controller
 
 class Scene:
     def __init__(self, collada_scene):

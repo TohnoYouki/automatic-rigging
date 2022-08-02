@@ -1,7 +1,7 @@
 import numpy as np
 from collada import *
-from .scene import Scene
-from .reader import Reader
+from scene import Scene
+from reader import Reader
 
 class DAE:
     @staticmethod
