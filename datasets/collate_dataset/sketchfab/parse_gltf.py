@@ -8,9 +8,7 @@ sys.path.append('../../../utils/')
 from multiprocess import multi_process
 
 model_dir = 'downloaded models/'
-model_dir = '/home/tohnoyouki/Desktop/RigNet/owndataset/sketchfab/test2/'
 save_dir = 'extract models/'
-save_dir = '/home/tohnoyouki/Desktop/RigNet/owndataset/sketchfab/extract models/'
 
 def get_pending():
     models = os.listdir(model_dir)
