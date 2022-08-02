@@ -11,10 +11,10 @@ def download(uid, name):
     url = 'https://api.sketchfab.com/v3/models/{}/download'.format(uid)
     try:
         response = requests.get(url, headers = headers)
+        data = response.json()
     except RequestException as exc:
         return f'An API Error Occured: {exc}'
     else:
-        data = response.json()
         if 'glb' in data:
             file_type = 'glb'
             download_url = data['glb']['url']
