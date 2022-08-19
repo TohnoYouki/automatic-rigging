@@ -1,3 +1,4 @@
+import math
 import time
 import requests
 
@@ -19,12 +20,20 @@ def find_all(string, content):
         else: break
     return result
 
-def get_request(url, max_try_count = 10):
+def split_into_slices(array, size):
+    number = len(array) // size
+    if number * size < len(array): number += 1
+    start = [i * size for i in range(number)]
+    end = [min((i + 1) * size, len(array)) for i in range(number)]
+    slices = [array[start[i]:end[i]] for i in range(number)]
+    return slices
+
+def get_request(url, max_try_count = 10, **kargs):
     try_index = 0
     while try_index < max_try_count:
         try_index += 1
         try: 
-            request_result = requests.get(url, timeout = 3)
+            request_result = requests.get(url, timeout = 3, **kargs)
         except: 
             print(url, 'request error for no.', try_index)
             time.sleep(1)
@@ -32,7 +41,6 @@ def get_request(url, max_try_count = 10):
         if request_result.status_code != requests.codes.ok:
             time.sleep(1)
             continue
-        content = str(request_result.content)
         break
     if try_index >= max_try_count: raise Exception()
-    return content
+    return request_result

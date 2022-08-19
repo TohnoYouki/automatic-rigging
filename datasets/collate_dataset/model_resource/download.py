@@ -1,29 +1,22 @@
 import os
 import sys
 import json
-import requests
+from utils import get_request
 sys.path.append('../../../utils/')
 from multiprocess import multi_process
 
 save_dir = './zip/'
 
-def download(data):
-    result = []
+def download(data, lock):
     url, index = data
     download_url = 'https://www.models-resource.com/download/' + index + '/'
-    model = requests.get(download_url, stream = True)
-    for chunk in model.iter_content(chunk_size=128):
-        result.append(chunk)
-    return [index, result]
-
-def save_models(datas):
-    for index, data in datas:
-        name, content = data
-        if os.path.exists(save_dir + name + '.zip'): 
-            os.remove(save_dir + name + '.zip')  
-        with open(save_dir + name + '.zip', 'wb') as file:
-            for chunk in content: 
-                file.write(chunk)
+    model = get_request(download_url, 10)
+    if os.path.exists(save_dir + index + '.zip'):
+        os.remove(save_dir + index + '.zip')
+    with open(save_dir + index + '.zip', 'wb') as file:
+        for chunk in model.iter_content(chunk_size=128):
+            file.write(chunk)
+    return index
 
 def get_downloading():
     with open('section_label.json') as file:
@@ -36,6 +29,14 @@ def get_downloading():
 if __name__ == '__main__':
     process_number = 8
     downloading = get_downloading()
-    multi_process(download, downloading, process_number, save = save_models)
+    downloaded = multi_process(download, downloading, process_number)
+    downloaded = [x[1] for x in downloaded]
+    failed = [x[1] for x in downloading if x[1] not in downloaded]
+    for index in failed:
+        if os.path.exists(save_dir + index + '.zip'):
+            os.remove(save_dir + index + '.zip')
+    if len(failed) > 0:
+        print('please run again!')
     downloading = get_downloading()
-    if len(downloading) > 0: print('please run again!')
+    if len(downloading) > 0: 
+        print('please run again!')

@@ -1,8 +1,8 @@
 import os, sys, json
 sys.path.append('../../../utils/')
 from multiprocess import multi_process
-from utils import base_url, get_request
 from utils import find_all, find_middle_content
+from utils import base_url, get_request, split_into_slices
 
 def find_all_models(content, game_html):
     numbers = set()
@@ -15,27 +15,30 @@ def find_all_models(content, game_html):
     assert(all([x.isdigit() for x in numbers]))
     return numbers
 
-def get_all_section_models(url):
-    content = get_request(base_url + url)
-    indexs = find_all(content, 'sect-name')
-    sections = [find_middle_content(content[x + 15:], '"', '"') for x in indexs]
-    section_games = {x:[] for x in sections}
-    for j, start in enumerate(indexs):
-        end = indexs[j + 1] if j < len(indexs) - 1 else len(content)
-        section_games[sections[j]] = find_all_models(content[start:end], url)
-    section_games = [[x, section_games[x]] for x in section_games]
-    return [url, section_games]
-
-def save_section(datas):
+def get_section_models(urls, lock):
+    result = []
+    for url in urls:
+        content = str(get_request(base_url + url).content)
+        indexs = find_all(content, 'sect-name')
+        sections = [find_middle_content(content[x + 15:], '"', '"') 
+                    for x in indexs]
+        games = {x:[] for x in sections}
+        for i, start in enumerate(indexs):
+            end = indexs[i + 1] if i < len(indexs) - 1 else len(content)
+            games[sections[i]] = find_all_models(content[start:end], url)
+        games = [[x, games[x]] for x in games]
+        result.append([url, games])
+    lock.acquire()
     with open('section.json') as file:
         sections = json.load(file)
-    for index, data in datas:
-        url, section_games = data
-        sections[url][2] = section_games
+    for url, games in result:
+        sections[url][2] = games
     with open('section.json', 'w') as file:
         file.write(json.dumps(sections))
+    lock.release()
+    return [True]
 
-def load_section():
+def load_pending_section():
     if os.path.isfile('section.json'):
         with open('section.json') as file:
             sections = json.load(file)
@@ -46,17 +49,23 @@ def load_section():
         sections = {x[1]:[x[0], x[2], None] for x in games}
         with open('section.json', 'w') as file:
             file.write(json.dumps(sections))
+    sections = [x for x, y in sections.items() if y[2] is None]
     return sections    
+
+def get_all_sections(process_number):
+    sections = load_pending_section()
+    slices = split_into_slices(sections, 50)
+    multi_process(get_section_models, slices, process_number)
+    sections = load_pending_section()
+    if len(sections) > 0: return None
+    with open('section.json') as file:
+        sections = json.load(file)
+    return sections
 
 if __name__ == '__main__':
     process_number = 8
-    sections = load_section()
-    pending = [x for x, y in sections.items() if y[2] is None]
-    result = multi_process(get_all_section_models, pending,
-                           process_number, save = save_section)
-    sections = load_section()
-    if len([x for x, y in sections.items() if y[2] is None]) > 0:
-        print('please run again!')
+    sections = get_all_sections(process_number)
+    if sections is None: print('please run again!')
     else:
         result = []
         for url, value in sections.items():
