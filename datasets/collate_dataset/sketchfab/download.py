@@ -3,8 +3,11 @@ import json
 import requests
 from requests.exceptions import RequestException
 
-save_dir = 'downloaded models/'
+save_dir = './download models/'
 API_TOKEN = 'Put Your API Token Here'
+API_TOKEN = '1f175926c78d435e995de13c643c50e4'
+API_TOKEN = 'd76f38efd90d449486c82730fcfcea7c'
+API_TOKEN = 'bc3b2ab3dbd54ce3893686348564c042'
 
 def download(uid, name):
     headers = {'Authorization': 'Token {}'.format(API_TOKEN)}
