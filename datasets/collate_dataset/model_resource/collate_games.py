@@ -49,8 +49,9 @@ def search_games(category, lock):
 
 def get_all_games(process_number):
     urls = get_all_urls()
-    games = multi_process(search_games, urls, process_number)
+    games, errors = multi_process(search_games, urls, process_number)
     assert(len(games) == len(urls))
+    assert(len(errors) == 0)
     games = sum([x[1] for x in games], [])
     assert(len(set([x[1] for x in games])) == len(games))
     games.sort(key = lambda x:x[1])

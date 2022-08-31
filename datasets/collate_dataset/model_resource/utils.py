@@ -1,8 +1,7 @@
-import math
 import time
 import requests
 
-formats = ['dae', 'smd']
+formats = ['dae', 'smd', 'gltf', 'glb']
 base_url = 'https://www.models-resource.com/'
 
 def find_middle_content(string, start, end):

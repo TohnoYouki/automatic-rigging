@@ -53,8 +53,9 @@ def get_pending():
 if __name__ == '__main__':
     process_number = 8
     pedding = get_pending()
+    print(len(pedding), 'left')
     slice_size = max(1, min(len(pedding) // process_number, 50))
     pedding = split_into_slices(pedding, slice_size)
-    multi_process(filter_format, pedding, process_number)
+    _, errors = multi_process(filter_format, pedding, process_number)
     pedding = get_pending()
-    if len(pedding) > 0: print('please run again!')
+    if len(pedding) > 0 or len(errors) > 0: print('please run again!')

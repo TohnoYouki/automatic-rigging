@@ -55,7 +55,8 @@ def load_pending_section():
 def get_all_sections(process_number):
     sections = load_pending_section()
     slices = split_into_slices(sections, 50)
-    multi_process(get_section_models, slices, process_number)
+    _, errors = multi_process(get_section_models, slices, process_number)
+    if len(errors) > 0: return None
     sections = load_pending_section()
     if len(sections) > 0: return None
     with open('section.json') as file:

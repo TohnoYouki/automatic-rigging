@@ -29,13 +29,14 @@ def get_downloading():
 if __name__ == '__main__':
     process_number = 8
     downloading = get_downloading()
-    downloaded = multi_process(download, downloading, process_number)
+    print(len(downloading))
+    downloaded, errors = multi_process(download, downloading, process_number)
     downloaded = [x[1] for x in downloaded]
     failed = [x[1] for x in downloading if x[1] not in downloaded]
     for index in failed:
         if os.path.exists(save_dir + index + '.zip'):
             os.remove(save_dir + index + '.zip')
-    if len(failed) > 0:
+    if len(failed) > 0 or len(errors) > 0:
         print('please run again!')
     downloading = get_downloading()
     if len(downloading) > 0: 
