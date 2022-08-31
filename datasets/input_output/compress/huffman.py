@@ -12,16 +12,18 @@ class HuffmanUtil:
         return np.array(result).astype(np.uint8)
 
     @staticmethod
-    def decode(keys, coding, number):
+    def decode(keys, length, coding, number):
         result, key = [], 0
-        keys = {int(x, 2):i for i, x in enumerate(keys)}
+        keys = {(x, length[i]):i for i, x in enumerate(keys)}
         coding = [bin(x)[2:] for x in coding]
         coding = ''.join(['0' * (8 - len(x)) + x for x in coding])
+        size = 0
         for c in coding:
             key = key * 2 + int(c)
-            if key in keys:
-                result.append(keys[key])
-                key = 0
+            size += 1
+            if (key, size) in keys:
+                result.append(keys[(key, size)])
+                key, size = 0, 0
         result = np.array(result[:number])
         return result
 
@@ -37,7 +39,6 @@ class HuffmanUtil:
             left_num = np.sum([x[1] for x in pdf[max_node:]])
             pdf = [pdf[i] for i in range(max_node - 1)]
             pdf.append([None, left_num])
-        else: pdf = [pdf[i] for i in range(max_node)]
         keys = [x[0] for x in pdf]
         frequences = [x[1] for x in pdf]
         return keys, frequences
@@ -72,10 +73,27 @@ class HuffmanUtil:
                 values[right] = values[index] + '1'
         return values[:len(frequences)]
 
+class FloatDiffGenerator():
+    def __init__(self, bytes, step):
+        self.bytes = bytes
+        self.step = step
+        self.cursor = 0
+
+    def decode(self, predict):
+        dtype = predict.dtype
+        bytes = self.bytes[self.cursor:self.cursor + self.step]
+        self.cursor += self.step
+        predict = np.frombuffer(np.array([predict]).tobytes(), np.uint8)
+        result = np.bitwise_xor(predict, bytes)
+        result = np.frombuffer(result.tobytes(), dtype)[0]
+        return result
+        
 class Huffman:
     @staticmethod
     def compress(numbers, max_node = 30):
         keys, frequences = HuffmanUtil.histogram(numbers, max_node)
+        if len(frequences) == 1:
+            return {'number': len(numbers), 'value': numbers[0]}
         key_coding = HuffmanUtil.build_huffman_dict(frequences)
         dict_coding, none_coding = '', []
         for number in numbers:
@@ -86,8 +104,11 @@ class Huffman:
         dict_coding = HuffmanUtil.coding_to_numpy(dict_coding)
         none_coding = np.array(none_coding)
         if keys[-1] is None: keys = keys[:-1]
+        key_length = np.array([len(x) for x in key_coding])
+        key_coding = np.array([int(x, 2) for x in key_coding])
         return {'key': np.array(keys), 
                 'number': len(numbers), 
+                'key_length': key_length,
                 'key_coding': key_coding,
                 'dict_coding': dict_coding, 
                 'none_coding': none_coding}
@@ -107,11 +128,14 @@ class Huffman:
     def decompress(state_dict):
         result = []
         num = state_dict['number']
+        if 'key' not in state_dict:
+            return np.array([state_dict['value'] for _ in range(num)])
         keys = state_dict['key']
+        key_length = state_dict['key_length']
         key_coding = state_dict['key_coding']
         dict_coding = state_dict['dict_coding']
         none_coding = state_dict['none_coding']
-        indices = HuffmanUtil.decode(key_coding, dict_coding, num)
+        indices = HuffmanUtil.decode(key_coding, key_length, dict_coding, num)
         none_cursor = 0
         for index in indices:
             if index >= len(keys):
