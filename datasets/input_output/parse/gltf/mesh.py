@@ -1,61 +1,6 @@
 import numpy as np
 from itertools import accumulate
-
-def calculate_vertex_normal(positions, triangles):
-    normal_set = [[] for _ in range(len(positions))]
-    triangles = np.array(triangles).reshape(-1, 3)
-    for i in range(len(triangles)):
-        x, y, z = triangles[i]
-        x, y, z = map(lambda x: positions[x], (x, y, z))
-        normal = np.cross(y - x, z - x)
-        area = np.linalg.norm(normal)
-        if np.linalg.norm(normal) < 1e-8:
-            normal = [0, 1.0, 0]
-        else: normal = normal / np.linalg.norm(normal)
-        for j in triangles[i]:
-            normal_set[j].append([normal, area])
-    normals = np.ones(positions.shape)
-    for i in range(len(normal_set)):
-        if len(normal_set[i]) <= 0: continue
-        normal = [x * weight for x, weight in normal_set[i]]
-        normal = np.sum(normal, 0)
-        if np.linalg.norm(normal) < 1e-8:
-            normal = normal_set[i][0][0]
-        if np.linalg.norm(normal) >= 1e-8:
-            normals[i] = normal
-    normals = normal / np.linalg.norm(normals, axis = 1)[:, np.newaxis]
-    return normals
-
-def convert_to_triangle(indices, mode):
-    if mode == 0:
-        indices = [[x, x, x] for x in indices]
-    elif mode == 1:
-        assert(len(indices) % 2 == 0)
-        line = [[i, i + 1] for i in range(0, len(indices), 2)]
-        indices = [[indices[x], indices[y], indices[x]] for x, y in line]
-    elif mode == 2:
-        line = [[i, (i + 1) % len(indices)] for i in range(len(indices))]
-        indices = [[indices[x], indices[y], indices[x]] for x, y in line]
-    elif mode == 3:
-        line = [[i, i + 1] for i in range(len(indices) - 1)]
-        indices = [[indices[x], indices[y], indices[x]] for x, y in line]
-    elif mode == 4:
-        assert(len(indices) % 3 == 0)
-        indices = [[indices[i], indices[i + 1], indices[i + 2]]
-                    for i in range(0, len(indices), 3)]
-    elif mode == 5:
-        assert(len(indices) >= 3)
-        indices = [[indices[i], indices[i + 1], indices[i + 2]]
-                    if i % 2 == 0 else 
-                    [indices[i + 1], indices[i], indices[i + 2]] 
-                    for i in range(0, indices - 2)]
-    elif mode == 6:
-        assert(len(indices) >= 3)
-        indices = [[indices[0], indices[i - 1], indices[i]] 
-                    for i in range(2, len(indices))]
-    else: raise Exception('Unknown Primitive Mode!')
-    indices = np.array(indices).reshape(-1)
-    return indices
+from .utils import calculate_vertex_normal, convert_to_triangle
 
 class Geometry:
     def __init__(self, positions, normals, triangles, skins):
@@ -76,34 +21,6 @@ class Geometry:
         for x in geometries: skins.extend(x.skins)
         return Geometry(vertices, normals, triangles, skins)
 
-    @staticmethod
-    def normal_matrix(matrix):
-        matrix = matrix.copy()
-        matrix[..., :3, 3] = 0
-        matrix = np.linalg.inv(matrix)
-        shape = [i for i in range(len(matrix.shape))]
-        shape[-1], shape[-2] = len(shape) - 2, len(shape) - 1
-        matrix = matrix.transpose(*shape)
-        return matrix
-
-    def transfer(self, matrix):
-        padding = np.ones((len(self.vertices), 1))
-        vertices = np.concatenate((self.vertices, padding), 1)
-        vertices = vertices.reshape(-1, 4, 1)
-        padding = np.zeros((len(self.normals), 1))
-        normals = np.concatenate((self.normals, padding), 1)
-        normals = normals.reshape(-1, 4, 1)
-        vertices = np.matmul(matrix, vertices)[:, :, 0]
-        normal_matrix = Geometry.normal_matrix(matrix)
-        normals = np.matmul(normal_matrix, normals)[:, :, 0]
-        vertices = vertices[:, :3] / vertices[:, 3:]
-        assert(np.max(np.abs(normals[:, 3:])) < 1e-5)
-        normals = normals[:, :3]
-        norm = np.linalg.norm(normals, axis = 1)[:, np.newaxis]
-        assert(np.min(norm) >= 1e-8)
-        normals = normals / norm
-        self.vertices, self.normals = vertices, normals
-
 class Primitive:
     def __init__(self, attributes, targets):
         self.names = attributes.keys()
@@ -113,9 +30,13 @@ class Primitive:
     @staticmethod
     def parse_attribute(attributes, accessors):
         result = {}
+        keys = {'POSITION': 'position', 'NORMAL':'normal', 'TANGENT': 'tangent', 
+                'TEXCOORD_0': 'texcoord0', 'TEXCOORD_1': 'texcoord1', 
+                'COLOR_0': 'color0', 'JOINTS_0': 'joints0', 'WEIGHTS_0': 'weights0'}
         if isinstance(attributes, dict):
             for key, index in attributes.items():
-                result[key] = accessors[index]
+                assert(key in keys)
+                result[keys[key]] = accessors[index]
             return result
         if attributes.POSITION is not None:
             result['position'] = accessors[attributes.POSITION]
@@ -152,12 +73,21 @@ class Primitive:
 
     def get_attribute(self, weights):
         assert(len(weights) == len(self.targets))
-        result = {}
+        weights, result = np.array(weights), {}
         for name in self.names:
             result[name] = self.attributes[name].copy()
-            for i, weight in enumerate(weights):
-                if name not in self.targets[i]: continue
-                result[name] += weight * self.targets[i][name]
+            morph = [[weight, target[name]] for weight, target 
+                      in zip(weights, self.targets) if name in target]
+            if len(morph) == 0: continue
+            shape = morph[0][1].shape
+            morph_weights = np.array([x[0] for x in morph])[None]
+            morph_targets = np.concatenate([x[1].reshape(1, -1) for x in morph])
+            morph = np.matmul(morph_weights, morph_targets)[0].reshape(shape)
+            if name == 'tangent' and result[name].shape[1] == 4:
+                tangent = result[name][:, :3] + morph[:, :3]
+                tangent = np.concatenate((tangent, result[name][:, 3:]), axis = 1)
+                result[name] = tangent
+            else: result[name] = morph + result[name]
         return result
 
     def get_skin_geometry(self, weights):
@@ -165,23 +95,19 @@ class Primitive:
         vertices = attributes['position']
         normals = attributes['normal']
         triangles = attributes['triangle']
+        assert(len(vertices) == len(normals))
         if 'joints0' in attributes and 'weights0' in attributes:
             joints = attributes['joints0']
             weights = attributes['weights0']
             assert(joints.shape == weights.shape)
             assert(len(joints.shape) == 2)
-            skins = []
+            assert(len(vertices) == len(joints))
+        else: joints, weights = None, None
+        skins = [[] for _ in range(len(vertices))]
+        if joints is not None:
             for i in range(len(joints)):
-                sum_weight = np.sum(weights[i])
-                if sum_weight < 1e-5: 
-                    skins.append([])
-                    continue
-                normalize_weights = weights[i] / sum_weight
-                skins.append([[joints[i][j], normalize_weights[j]] 
-                              for j in range(len(joints[i]))])
-        else: skins = [[] for _ in range(len(vertices))]
-        assert(len(vertices) == len(skins))
-        assert(len(normals) == len(skins))
+                for j in range(len(joints[i])):
+                    skins[i].append([joints[i][j], weights[i][j]])
         return Geometry(vertices, normals, triangles, skins)
 
 class Mesh:
@@ -196,13 +122,12 @@ class Mesh:
                       for x in mesh.primitives]
         return Mesh(mesh.name, primitives, mesh.weights)
 
-    def get_mesh(self, matrix = np.identity(4), weights = None):
+    def mesh(self, weights = None):
         if weights is None:
             weights = self.default_weights
         geometries = [x.get_skin_geometry(weights) 
                       for x in self.primitives]
         mesh = Geometry.merge_geometries(geometries)
-        mesh.transfer(matrix)
         return mesh
 
 def parse_mesh(gltf, accessors):

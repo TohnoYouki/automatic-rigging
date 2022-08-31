@@ -33,6 +33,8 @@ class Node:
         if node_matrix is not None:
             node_matrix = np.array(node_matrix).reshape(4, 4)
             node_matrix = node_matrix.transpose(1, 0)
+            assert(node_matrix[3][3] == 1.0)
+            assert(all(node_matrix[3][:3] == 0.0))
         if params.count(None) != 3 or node_matrix is None:
             params = [x if x is not None else default[i] 
                       for i, x in enumerate(params)]
@@ -47,34 +49,14 @@ class Node:
     @staticmethod
     def parse(node, meshes):
         local_matrix = Node.parse_matrix(node)
-        if node.mesh is not None:
-            mesh = meshes[node.mesh]
-        else: mesh = None
-        if hasattr(node, 'weights'):
-            weights = node.weights
-        else: weights = None
+        mesh = meshes[node.mesh] if node.mesh is not None else None
+        weights = node.weights if hasattr(node, 'weights') else None
         return Node(node.name, node.skin, weights, local_matrix, mesh)
 
-    def static_mesh(self):
-        if self.mesh is None: return None
-        return self.mesh.get_mesh(self.global_matrix, self.weights)
-
-    def global_mesh(self):
-        if self.mesh is None: return None
-        mesh = self.static_mesh()
-        if self.skeleton is None: return mesh
-        assert(isinstance(self.skeleton, Skeleton))
-        joint_matrixs = self.skeleton.joint_matrixs
-        vertices_matrixs = []
-        for i in range(len(mesh.skins)):
-            if len(mesh.skins[i]) > 0:
-                matrixs = [joint_matrixs[j] * w for j, w in mesh.skins[i]]
-                vertices_matrixs.append(np.sum(matrixs, axis = 0))
-            else: vertices_matrixs.append(np.identity(4))
-        matrixs = np.array(vertices_matrixs)
-        matrixs = np.matmul(matrixs, np.linalg.inv(self.global_matrix))
-        mesh.transfer(matrixs)
-        return mesh
+    def rigging_mesh(self):
+        if self.mesh is None: return None, None
+        mesh = self.mesh.mesh(self.weights)
+        return mesh, self.skeleton
 
 def parse_node(gltf, meshes):
     nodes = [Node.parse(x, meshes) for x in gltf.nodes]

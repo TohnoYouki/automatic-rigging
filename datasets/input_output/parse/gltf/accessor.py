@@ -1,4 +1,3 @@
-import struct
 import numpy as np
 from operator import mul
 from pygltflib import GLTF2
@@ -33,33 +32,29 @@ def data_shape(type):
 
 def data_type(type):
     if type == 5120:
-        return 'b', 1
+        return np.dtype(np.int8), 1
     elif type == 5121:
-        return 'B', 1
+        return np.dtype(np.uint8), 1
     elif type == 5122:
-        return 'h', 2
+        return np.dtype(np.int16), 2
     elif type == 5123:
-        return 'H', 2
+        return np.dtype(np.uint16), 2
     elif type == 5125:
-        return 'I', 4
+        return np.dtype(np.int32), 4
     elif type == 5126:
-        return 'f', 4
+        return np.dtype(np.float32), 4
     else: raise Exception('Unknown Data Type!')
 
-def pick_data_from_bufferview(data, stride, offset, count, type, shape):
+def pick_data_from_bufferview(data, stride, offset, count, dtype, shape):
     raw, result = data[offset:], []
     shape = data_shape(shape)
     number = reduce(mul, shape, 1)
-    type, dsize = data_type(type)
+    dtype, dsize = data_type(dtype)
+    dtype = dtype.newbyteorder('<')
     csize = number * dsize
-    for i in range(count):
-        if stride is not None:
-            result.append(raw[i * stride:i * stride + csize])
-        else: result.append(raw[i * csize:(i + 1) * csize])
-    result = [[x[i * dsize:(i + 1) * dsize] 
-               for i in range(number)] for x in result]
-    result = [[struct.unpack(type, x)[0] for x in y] for y in result]
-    result = np.array(result).reshape(count, *shape)
+    if stride is None: stride = csize
+    result = b''.join([raw[i * stride:i * stride + csize] for i in range(count)])
+    result = np.frombuffer(result, dtype).reshape(count, *shape)
     return result
 
 def parse_sparse(buffer_views, accessor):

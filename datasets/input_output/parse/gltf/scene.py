@@ -1,19 +1,20 @@
 import numpy as np
-from .mesh import Geometry
-from .skeleton import Skeleton
-from itertools import accumulate
 
 class Scene:
-    def __init__(self, name, vertices, normals, triangles, 
-                       joint_names, parents, joint_pos, skins):
+    def __init__(self, name, riggings, partials):
         self.name = name
-        self.vertices = vertices
-        self.normals = normals
-        self.triangles = triangles
-        self.joint_name = joint_names
-        self.joint_parent = parents
-        self.joint_position = joint_pos
-        self.skins = skins
+        self.names, self.matrixs = [], []
+        self.meshes, self.skeleton_ref = [], []
+        self.inverse_bind_matrixs = []
+        for rigging in riggings:
+            name, mesh, skeleton, matrix = rigging
+            self.matrixs.append(matrix)
+            self.meshes.append(mesh)
+            self.names.append(name)
+            if skeleton is not None:
+                self.skeleton_ref.append(partials[skeleton])
+            else: self.skeleton_ref.append(None)
+        self.remap_skeleton(partials)
 
     @staticmethod
     def node_set(node):
@@ -36,41 +37,31 @@ class Scene:
         return scene_nodes
 
     @staticmethod
-    def scene_skeleton(nodes):
-        skeletons, names = [], []
-        for i in range(len(nodes)):
-            if nodes[i].skeleton is None: continue
-            if not isinstance(nodes[i].skeleton, Skeleton): continue
-            if nodes[i].skeleton in skeletons: continue
-            skeletons.append(nodes[i].skeleton)
-        if len(skeletons) <= 0: return None
-        positions = np.concatenate([x.positions for x in skeletons])
-        for x in skeletons: names.extend(x.joints)
-        num = [len(x.positions) for x in skeletons]
-        prefix = list(accumulate([0] + num))
-        parents = np.concatenate([[-1 if y == -1 else y + prefix[i] 
-                for y in x.parents] for i, x in enumerate(skeletons)])
-        return positions, parents, names, skeletons, prefix
-
-    @staticmethod
-    def parse(scene, nodes):
+    def parse(scene, nodes, skeletons):
+        result = []
         scene_nodes = Scene.scene_nodes(scene, nodes)
-        scene_skeleton = Scene.scene_skeleton(scene_nodes)
-        if scene_skeleton is not None:
-            joint_pos, parents, names, skeletons, prefixs = scene_skeleton
-        meshes = [x.global_mesh() for x in scene_nodes]
-        for i, mesh in enumerate(meshes):
-            if mesh is None: continue
-            if scene_nodes[i].skeleton is None: continue
-            assert(scene_nodes[i].skeleton in skeletons)
-            prefix = prefixs[skeletons.index(scene_nodes[i].skeleton)]
-            for j in range(len(mesh.skins)):
-                for k in range(len(mesh.skins[j])):
-                    mesh.skins[j][k][0] += prefix
-        meshes = [x for x in meshes if x is not None]
-        mesh = Geometry.merge_geometries(meshes)
-        if scene_skeleton is None: return mesh
-        vertices, normals = mesh.vertices, mesh.normals
-        triangles, skins = mesh.triangles, mesh.skins
-        return Scene(scene.name, vertices, normals, triangles,
-                     names, parents, joint_pos, skins)
+        result = [[x.name, *x.rigging_mesh(), x.global_matrix] 
+                   for x in scene_nodes]
+        result = [x for x in result if x[1] is not None]
+        return Scene(scene.name, result, skeletons)
+
+    def remap_skeleton(self, partials):
+        skeletons = list(set([x.skeleton for x in partials]))
+        for i in range(len(self.skeleton_ref)):
+            partial = self.skeleton_ref[i]
+            if partial is None: 
+                self.inverse_bind_matrixs.append(None)
+                continue
+            skeleton = partial.skeleton
+            ib_matrixs = [np.identity(4) for _ in range(len(skeleton.joints))]
+            joint_map = {j:skeleton.joints.index(x) 
+                         for j, x in enumerate(partial.joints)}
+            for j in range(len(self.meshes[i].skins)):
+                skin = self.meshes[i].skins[j]
+                for k in range(len(skin)):
+                    skin[k][0] = joint_map[skin[k][0]]
+            for j in range(len(partial.joints)):
+                ib_matrixs[joint_map[j]] = partial.inverse_bind_matrixs[j]
+            self.skeleton_ref[i] = skeletons.index(skeleton)
+            self.inverse_bind_matrixs.append(np.array(ib_matrixs))
+        self.skeletons = skeletons
