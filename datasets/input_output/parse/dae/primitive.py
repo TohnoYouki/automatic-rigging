@@ -1,37 +1,11 @@
 import numpy as np
 from collada import *
 
-class Geometry:
-    @staticmethod
-    def parse_geometry(geometric):
-        geometry_vertex, geometry_face_normal = [], []
-        geometry_triangle = []
-        source_ids, vertex_num = {}, 0
-        for primitive in geometric.primitives:
-            assert('VERTEX' in primitive.sources)
-            source = primitive.sources['VERTEX']
-            assert(len(source) == 1)
-            source_id, source_num = source[0][2], len(source[0][4])
-            parse_result = Geometry.parse_primitive(primitive)
-            if parse_result is None: raise Exception('Primitive parse error!')
-            vertices, normals, triangles = parse_result
-            if source_id not in source_ids:
-                source_ids[source_id] = vertex_num
-                vertex_num += len(vertices)
-                assert(len(vertices) == source_num)  
-                geometry_vertex.append(vertices)
-            geometry_face_normal.append(normals)
-            geometry_triangle.append(triangles + source_ids[source_id])
-        vertices = np.concatenate(geometry_vertex)
-        face_normals = np.concatenate(geometry_face_normal)
-        triangles = np.concatenate(geometry_triangle)
-        normals = Geometry.calculate_vertex_normal(vertices, triangles, face_normals)
-        return vertices, normals, triangles
-
+class Primitive:
     @staticmethod
     def parse_primitive(primitive):
-        face_index = Geometry.get_face_index(primitive)
-        if face_index is None: return None
+        face_index = Primitive.get_face_index(primitive)
+        if face_index is None or len(face_index) == 0: return None
         vertices = primitive.vertex
         triangles = np.array(primitive.vertex_index).reshape(-1)
         triangles = triangles[face_index].reshape(-1)
@@ -40,7 +14,7 @@ class Geometry:
             normal_index = np.array(primitive.normal_index).reshape(-1)
             normal_index = normal_index[face_index].reshape(-1)
             face_normals = normals[normal_index]
-        else: face_normals = Geometry.calculate_face_normal(vertices, triangles)
+        else: face_normals = Primitive.calculate_face_normal(vertices, triangles)
         return vertices, face_normals, triangles
         
     @staticmethod
@@ -59,6 +33,7 @@ class Geometry:
         elif isinstance(primitive, geometry.lineset.LineSet):
             face_index = [[i * 2, i * 2 + 1, i * 2] for i in range(primitive.nlines)]
             face_index = np.array(face_index).reshape(-1, 3)
+        else: raise Exception('Unsupported geometry!')
         return face_index
 
     @staticmethod
