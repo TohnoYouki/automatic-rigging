@@ -23,5 +23,15 @@ class RiggingMesh:
         parents = np.array(parents)
         skins = [[[ids.index(x), y] for x, y in skin]
                    for skin in self.mesh.skins]
-        joint_position = self.skeleton.joint_pos(0)
+        joints = sorted(set(sum([[y[0] for y in x] for x in skins], [])))
+        for joint in joints:
+            visited = [joint]
+            while visited[-1] >= 0:
+                node = parents[visited[-1]]
+                if node in visited: break
+                visited.append(node)
+            if visited[-1] >= 0:
+                assert(visited[-1] not in joints)
+                parents[visited[-1]] = -1
+        joint_position = self.skeleton.joint_pos(0, parents)
         return parents, joint_position, skins

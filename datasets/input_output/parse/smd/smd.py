@@ -44,10 +44,16 @@ class SMDReader:
         return result
 
     @staticmethod
-    def generate(path):
-        reg = re.compile("\s+") 
-        with open(path, 'rb') as file:
-            content = [line for line in file]
+    def generate(file):
+        reg = re.compile("\s+")
+        if isinstance(file, str):
+            with open(file, 'rb') as f:
+                content = [line for line in f]
+        else: 
+            content = file.split(b'\n')
+            if len(content) > 0 and content[-1] == b'':
+                content = content[:-1]
+            content = [line + b'\n' for line in content]
         content = [line.decode('ISO-8859-1') for line in content]
         content = [reg.split(line.strip()) for line in content]
         result = SMDReader.parse_block(content)
