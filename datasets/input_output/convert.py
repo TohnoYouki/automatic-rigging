@@ -1,78 +1,84 @@
-import os
+import numpy as np
 from .parse import *
-from .basic import Rigging
+from .basic import *
 
-class Converter:
+class SceneConverter:
     @staticmethod
-    def convert(path):
-        if os.path.isfile(path):
-            extend = path.split('.')[-1].lower()
-            if extend == 'dae':
-                result = Converter.convert_dae(path)
-            elif extend == 'smd':
-                result = Converter.convert_smd(path)
-            elif extend == 'gltf' or extend == 'glb':
-                result = Converter.convert_gltf(path)
-            else: result = None 
-        else: result = None
-        return result
-
-    @staticmethod
-    def convert_dae(path):
-        try: 
-            colladas = DAE.generate(path)
-            if colladas is None: return None
-        except Exception as e: 
-            return None
-        result = []
-        for j, collada in enumerate(colladas):
-            joint_positions = collada.joint_position.reshape(-1)
-            joint_parents = collada.joint_parent
-            vertices = collada.vertices.reshape(-1)
-            normals = collada.normals.reshape(-1)
-            triangles = collada.triangles.reshape(-1)
-            mesh = (vertices, normals, triangles)
-            skeleton = (collada.joint_name, joint_positions, joint_parents)
-            rigging = Rigging.create(*mesh, *skeleton, collada.skins)
-            result.append(rigging)
-        return result
-
-    @staticmethod
-    def convert_smd(path):
-        try: smd = SMDReader.generate(path)
-        except Exception as e: 
-            return None
-        if isinstance(smd, SMDScene):
-            try:
-                joint_parents, joint_positions, skins = smd.transform()
-                joint_names = smd.skeleton.names
-                joint_positions = joint_positions.reshape(-1)
-                vertices = smd.mesh.vertices.reshape(-1)
-                normals = smd.mesh.normals.reshape(-1)
-                triangles = smd.mesh.triangles.reshape(-1)
-                mesh = (vertices, normals, triangles)
-                skeleton = (joint_names, joint_positions, joint_parents)
-                rigging = Rigging.create(*mesh, *skeleton, skins)
-            except Exception as e:
-                return None
-            else: return []
-        else: return []
-
-    @staticmethod
-    def convert_gltf(path):
-        try: scenes = GLTF.generate(path)
+    def convert(file, format):
+        try:
+            if format == 'dae':
+                result = SceneConverter.convert_dae(file)
+            elif format == 'smd':
+                result = SceneConverter.convert_smd(file)
+            elif format == 'gltf' or format == 'glb':
+                result = SceneConverter.convert_gltf(file)
+            else: result = None
         except Exception as e:
-            return None
+            result = None
+        return result 
+
+    @staticmethod
+    def convert_dae(file):
+        scenes = DAE.generate(file)
+        if scenes is None: return None
+        result = []
+        for scene in scenes:
+            riggings, scene_skeletons = [], []
+            for skeleton in scene.skeletons:
+                names = skeleton.names
+                positions = skeleton.positions
+                parents = skeleton.parents
+                matrixs = [np.identity(4) for x in range(len(names))]
+                skeleton = Skeleton(names, positions, parents, matrixs)
+                scene_skeletons.append(skeleton)
+            for i, mesh in enumerate(scene.meshes):
+                skin = Skin.from_vertex_skins(mesh.skins)
+                mesh = Mesh(mesh.vertices, mesh.normals, mesh.triangles)
+                riggings.append(Rigging(mesh, scene.refs[i], skin))
+            matrixs = np.concatenate([x[None] for x in scene.matrixs])
+            result.append(Scene(riggings, scene_skeletons, matrixs))
+        return result
+
+    @staticmethod
+    def convert_smd(file):
+        smd = SMDReader.generate(file)
+        if isinstance(smd, SMDScene):
+            parents, positions, skins = smd.transform()
+            skins = Skin.from_vertex_skins(skins)
+            names = smd.skeleton.names
+            mesh = Mesh(smd.mesh.vertices, smd.mesh.normals, smd.mesh.triangles)
+            matrixs = np.array([np.identity(4) for _ in range(len(names))])
+            skeleton = Skeleton(names, positions, parents, matrixs)
+            rigging = Rigging(mesh, 0, skins)
+            return [Scene([rigging], [skeleton], np.identity(4))]
+        if isinstance(smd, SMDVertexAnimation): 
+            smd = smd.mesh
+        if isinstance(smd, SMDStaticMesh):
+            mesh = Mesh(smd.vertices, smd.normals, smd.triangles)
+            skins = [[] for _ in range(len(smd.vertices))]
+            skins = Skin.from_vertex_skins(skins)
+            return [Scene([Rigging(mesh, None, skins)], [], np.identity(4))]
+        return []
+
+    @staticmethod
+    def convert_gltf(file):
+        scenes = GLTF.generate(file)
         scenes = [x for x in scenes if isinstance(x, GLTFScene)]
         result = []
         for scene in scenes:
-            joint_positions = scene.joint_position.reshape(-1)
-            joint_parents = scene.joint_parent
-            skeleton = (scene.joint_name, joint_positions, joint_parents)
-            vertices = scene.vertices.reshape(-1)
-            normals = scene.normals.reshape(-1)
-            triangles = scene.triangles.reshape(-1)
-            mesh = (vertices, normals, triangles)
-            rigging = Rigging.create(*mesh, *skeleton, scene.skins)
-            result.append(rigging)
-        return result 
+            riggings, scene_skeletons = [], []
+            for skeleton in scene.skeletons:
+                names = skeleton.names
+                positions = skeleton.positions
+                parents = skeleton.parents
+                matrixs = skeleton.joint_matrixs
+                skeleton = Skeleton(names, positions, parents, matrixs)
+                scene_skeletons.append(skeleton)
+            for i, mesh in enumerate(scene.meshes):
+                skin = Skin.from_vertex_skins(mesh.skins)
+                skin.inverse_bind_matrixs = scene.inverse_bind_matrixs[i]
+                mesh = Mesh(mesh.vertices, mesh.normals, mesh.triangles)
+                riggings.append(Rigging(mesh, scene.skeleton_ref[i], skin))
+            matrixs = np.concatenate([x[None] for x in scene.matrixs]) 
+            result.append(Scene(riggings, scene_skeletons, matrixs))
+        return result
