@@ -40,7 +40,10 @@ def download(uid, name):
 if __name__ == '__main__':
     with open('download_info.json') as file:
         pending = json.load(file)
-    downloaded = os.listdir(save_dir)
+    if os.path.exists('downloaded.json'):
+        with open('downloaded.json') as file:
+            downloaded = json.load(file)
+    else: downloaded = []
     for path in downloaded:
         uid = path.split('.')[0]
         if uid in pending: 
@@ -56,7 +59,11 @@ if __name__ == '__main__':
         name, category, _ = pending[uid]
         pending[uid][2] = download(uid, uid)
         print(pending[uid][2])
+
         if pending[uid][2] == 'Too many requests.': break
-        
+        if pending[uid][2] == 'Download Successful':
+            downloaded.append(uid)
+            with open('downloaded.json', 'w') as file:
+                file.write(json.dumps(sorted(downloaded)))
         with open('download_info.json', 'w') as file:
             file.write(json.dumps(pending))

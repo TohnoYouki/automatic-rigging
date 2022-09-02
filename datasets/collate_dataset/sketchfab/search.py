@@ -74,7 +74,7 @@ def collate_from_last(url, last_result):
         result.extend(temps)
         if url is None: break 
         oldest = parse_time(result[-1])
-        if last_time is not None or oldest < last_time: break
+        if last_time is not None and oldest < last_time: break
     indices, uid_set = [False for _ in range(len(result))], set()
     for i in range(len(indices)):
         if result[i]['uid'] not in uid_set:
