@@ -5,7 +5,7 @@ from utils import get_request
 sys.path.append('../../../utils/')
 from multiprocess import multi_process
 
-save_dir = './zip/'
+save_dir = './download models/'
 
 def download(data, lock):
     url, index = data
@@ -23,6 +23,11 @@ def get_downloading():
         download_info = json.load(file)
     download_info = [x for x in download_info if x[2]]
     downloaded = {x.split('.')[0] for x in os.listdir(save_dir)}
+    if os.path.exists('downloaded.json'):
+        with open('downloaded.json') as file:
+            downloaded.update(json.load(file))
+    with open('downloaded.json', 'w') as file:
+        file.write(json.dumps(sorted(list(downloaded))))
     downloading = [[a, b] for a, b, c in download_info if b not in downloaded]
     return downloading
 

@@ -4,7 +4,7 @@ from multiprocess import multi_process
 sys.path.append('../../')
 from input_output.convert import SceneConverter
 
-zip_dir = './zip/'
+zip_dir = './download models/'
 save_dir = './extract/'
 
 def get_pending():
